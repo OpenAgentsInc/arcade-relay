@@ -1,6 +1,6 @@
 use hyper::server::Server;
 use hyper::service::{make_service_fn, service_fn};
-use hyper::{Body, Request, Response};
+use hyper::{upgrade, Body, Request, Response};
 use std::convert::Infallible;
 use std::convert::TryFrom;
 use tokio_tungstenite::WebSocketStream;
@@ -24,17 +24,26 @@ async fn main() {
     }
 }
 
-async fn handle_request(request: Request<Body>) -> Result<Response<Body>, Infallible> {
-    match tokio_tungstenite::tungstenite::handshake::server::Request::try_from(request) {
+async fn handle_request(mut request: Request<Body>) -> Result<Response<Body>, Infallible> {
+    match tokio_tungstenite::tungstenite::handshake::server::Request::<Body>::try_from(
+        request.clone(),
+    ) {
         Ok(ws_req) => {
-            let response = ws_req.into_response();
-            let ws_stream = WebSocketStream::from_raw_socket(
-                ws_req.into_stream(),
-                tokio_tungstenite::tungstenite::protocol::Role::Server,
-                None,
-            )
-            .await;
-            // Handle WebSocket stream here.
+            let response = ws_req.create_response();
+            tokio::spawn(async move {
+                match upgrade::on(&mut request).await {
+                    Ok(upgraded) => {
+                        let ws_stream = WebSocketStream::from_raw_socket(
+                            upgraded,
+                            tokio_tungstenite::tungstenite::protocol::Role::Server,
+                            None,
+                        )
+                        .await;
+                        // Handle WebSocket stream here.
+                    }
+                    Err(e) => eprintln!("Error upgrading connection: {}", e),
+                }
+            });
             Ok(response)
         }
         Err(_) => {
