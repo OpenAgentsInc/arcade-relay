@@ -25,6 +25,7 @@ name = "arcade-relay"
 version = "0.1.0"
 dependencies = [
  "futures",
+ "futures-util",
  "hyper",
  "log",
  "tokio",
