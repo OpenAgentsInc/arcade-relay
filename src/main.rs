@@ -17,10 +17,17 @@ async fn accept_connection(stream: TcpStream) {
     let mut ws_stream = accept_async(stream).await.expect("Failed to accept");
 
     while let Some(msg) = ws_stream.next().await {
+        println!("Received a message: {:?}", msg);
         match msg {
             Ok(Message::Ping(data)) => {
                 ws_stream
                     .send(Message::Pong(data))
+                    .await
+                    .expect("Failed to send pong");
+            }
+            Ok(Message::Text(text)) if text == "ping" => {
+                ws_stream
+                    .send(Message::Text("pong".to_string()))
                     .await
                     .expect("Failed to send pong");
             }
