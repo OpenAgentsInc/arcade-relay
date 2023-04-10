@@ -6,3 +6,11 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+tokio = { version = "1.0", features = ["full"] }
+hyper = { version="0.14", features=["client", "server","http1","http2","tcp"] }
+futures = "0.3"
+log = "0.4"
+tracing = "0.1"
+tracing-subscriber = "0.2"
+tungstenite = "0.14"
+tokio-tungstenite = "0.15"
