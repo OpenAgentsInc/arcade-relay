@@ -2,6 +2,7 @@ use hyper::server::Server;
 use hyper::service::{make_service_fn, service_fn};
 use hyper::{Body, Request, Response};
 use std::convert::Infallible;
+use std::convert::TryFrom;
 use tokio_tungstenite::WebSocketStream;
 use tracing::{info, Level};
 
@@ -24,23 +25,24 @@ async fn main() {
 }
 
 async fn handle_request(request: Request<Body>) -> Result<Response<Body>, Infallible> {
-    if let Some(ws_req) =
-        tokio_tungstenite::tungstenite::handshake::server::Request::from_request(request)
-    {
-        let response = ws_req.into_response();
-        let ws_stream = WebSocketStream::from_raw_socket(
-            ws_req.into_stream(),
-            tokio_tungstenite::tungstenite::protocol::Role::Server,
-            None,
-        )
-        .await;
-        // Handle WebSocket stream here.
-        Ok(response)
-    } else {
-        let response = Response::builder()
-            .status(400)
-            .body(Body::from("Invalid request"))
-            .unwrap();
-        Ok(response)
+    match tokio_tungstenite::tungstenite::handshake::server::Request::try_from(request) {
+        Ok(ws_req) => {
+            let response = ws_req.into_response();
+            let ws_stream = WebSocketStream::from_raw_socket(
+                ws_req.into_stream(),
+                tokio_tungstenite::tungstenite::protocol::Role::Server,
+                None,
+            )
+            .await;
+            // Handle WebSocket stream here.
+            Ok(response)
+        }
+        Err(_) => {
+            let response = Response::builder()
+                .status(400)
+                .body(Body::from("Invalid request"))
+                .unwrap();
+            Ok(response)
+        }
     }
 }
